@@ -326,6 +326,20 @@ h1 { font-size: 19px; font-weight: 600; margin-bottom: 4px; }
 
 <script>
 const SK = 'wellbeing-tracker-v14';
+const SK_PREV = 'wellbeing-tracker-v13'; // 旧バージョンのキー
+
+// 旧バージョンからデータを引き継ぐ
+function migrateFromPrev(){
+  try{
+    const prev=localStorage.getItem(SK_PREV);
+    const curr=localStorage.getItem(SK);
+    if(!prev) return; // 旧データなし
+    if(curr) return;  // 新データがすでにある場合は上書きしない
+    // 旧データをそのまま新キーにコピー
+    localStorage.setItem(SK, prev);
+    console.log('v13データをv14に移行しました');
+  }catch(e){}
+}
 let records = [], chart = null, currentView = 'hour';
 
 // =============================================
@@ -473,6 +487,23 @@ function getEffectiveVal(fi) {
 // ストレージ
 // =============================================
 function load(){
+  // 旧バージョンからのデータ移行（v13 → v14）
+  const OLD_KEYS=['wellbeing-tracker-v13','wellbeing-tracker-v12','wellbeing-tracker-v11','wellbeing-tracker-v10'];
+  if(!localStorage.getItem(SK)){
+    for(const oldKey of OLD_KEYS){
+      const oldData=localStorage.getItem(oldKey);
+      if(oldData){
+        try{
+          const migrated=JSON.parse(oldData);
+          if(Array.isArray(migrated)&&migrated.length>0){
+            localStorage.setItem(SK,oldData);
+            toast('v13のデータ（'+migrated.length+'件）を引き継ぎました');
+            break;
+          }
+        }catch(e){}
+      }
+    }
+  }
   try{ records=JSON.parse(localStorage.getItem(SK)||'[]'); }catch(e){ records=[]; }
   updateCount(); drawChart(); renderDetail(); renderHist();
   renderCompareChart(); renderCorrelation();
